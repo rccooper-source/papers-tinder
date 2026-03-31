@@ -1,0 +1,7 @@
+.env
+*.log
+papers_cache.json
+seen_papers.json
+__pycache__/
+*.pyc
+.DS_Store

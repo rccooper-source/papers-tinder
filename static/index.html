@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>PaperSwipe</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --card: #141414;
+      --card2: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #f0f0f0;
+      --muted: #888;
+      --dim: #444;
+      --yes: #22c55e;
+      --no: #ef4444;
+      --accent: #8b5cf6;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    #app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 6px;
+      flex-shrink: 0;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+    .counter {
+      font-size: 13px;
+      color: var(--muted);
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+    .saved-badge {
+      font-size: 13px;
+      color: var(--yes);
+      background: rgba(34,197,94,.12);
+      border: 1px solid rgba(34,197,94,.25);
+      border-radius: 20px;
+      padding: 4px 12px;
+      cursor: pointer;
+      display: none;
+    }
+    .saved-badge.visible { display: inline-block; }
+
+    /* ── Card area ───────────────────────────────────────────── */
+    #card-area {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+    }
+
+    /* Shadow cards behind the active one */
+    .card-shadow {
+      position: absolute;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      height: 92%;
+      background: var(--card2);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      z-index: 0;
+    }
+    .card-shadow:nth-child(1) { transform: scale(0.93) translateY(12px); opacity: 0.5; }
+    .card-shadow:nth-child(2) { transform: scale(0.96) translateY(6px);  opacity: 0.75; }
+
+    /* Main card */
+    .card {
+      position: absolute;
+      width: calc(100% - 32px);
+      max-width: 420px;
+      background: var(--card);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      padding: 24px 22px 20px;
+      z-index: 10;
+      cursor: grab;
+      user-select: none;
+      will-change: transform;
+      box-shadow: 0 24px 64px rgba(0,0,0,.6);
+    }
+    .card:active { cursor: grabbing; }
+
+    /* Swipe overlay tint */
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .1s;
+    }
+    .card.tint-yes::after  { background: rgba(34,197,94,.15); opacity: 1; }
+    .card.tint-no::after   { background: rgba(239,68,68,.15);  opacity: 1; }
+
+    /* Swipe labels */
+    .swipe-label {
+      position: absolute;
+      top: 22px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 3px solid;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      text-transform: uppercase;
+      transition: opacity .08s;
+    }
+    .swipe-label.yes { right: 22px; color: var(--yes); border-color: var(--yes); }
+    .swipe-label.no  { left:  22px; color: var(--no);  border-color: var(--no);  }
+
+    /* Card content */
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .year-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(139,92,246,.15);
+      border: 1px solid rgba(139,92,246,.3);
+      border-radius: 20px;
+      padding: 3px 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .arxiv-link {
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .arxiv-link:hover { color: var(--text); border-color: #555; }
+    .posted-date {
+      font-size: 11px;
+      color: var(--dim);
+      margin-left: auto;
+    }
+
+    .card-title {
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+
+    .affiliations {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+      min-height: 0;
+    }
+    .aff-pill {
+      font-size: 12px;
+      color: #aaa;
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+    }
+    .no-aff {
+      font-size: 12px;
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    .divider { height: 1px; background: var(--border); margin-bottom: 14px; }
+
+    .tldr-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .card-summary {
+      font-size: 16px;
+      line-height: 1.65;
+      color: #ccc;
+    }
+
+    .card-authors {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    #buttons {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 32px;
+      padding: 12px 20px 28px;
+      flex-shrink: 0;
+    }
+    .btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      border: 2px solid;
+      background: var(--card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      cursor: pointer;
+      transition: transform .1s, box-shadow .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.88); }
+    .btn-no  { border-color: var(--no);  color: var(--no);  box-shadow: 0 4px 20px rgba(239,68,68,.2); }
+    .btn-yes { border-color: var(--yes); color: var(--yes); box-shadow: 0 4px 20px rgba(34,197,94,.2); }
+    .btn-no:active  { box-shadow: 0 2px 12px rgba(239,68,68,.5); }
+    .btn-yes:active { box-shadow: 0 2px 12px rgba(34,197,94,.5); }
+
+    /* ── Loading ─────────────────────────────────────────────── */
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 15px;
+      z-index: 100;
+    }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid #2a2a2a;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Done ────────────────────────────────────────────────── */
+    #done {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+      gap: 12px;
+      position: absolute;
+      inset: 0;
+    }
+    #done h2 { font-size: 28px; font-weight: 800; }
+    #done p  { color: var(--muted); font-size: 15px; max-width: 280px; }
+    .refresh-btn {
+      margin-top: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .refresh-btn:active { opacity: .8; }
+
+    /* ── Saved drawer ────────────────────────────────────────── */
+    #saved-drawer {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+    }
+    #saved-drawer.open { display: flex; }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 20px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-header h2 { font-size: 18px; font-weight: 700; }
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    #saved-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .saved-item {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .saved-item-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .saved-item-links { display: flex; gap: 8px; }
+    .saved-link {
+      font-size: 12px;
+      color: var(--accent);
+      text-decoration: none;
+      background: rgba(139,92,246,.12);
+      border: 1px solid rgba(139,92,246,.25);
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .empty-saved {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 20px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Paper<span>Swipe</span></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="counter" id="counter">Loading…</div>
+      <div class="saved-badge" id="saved-badge" onclick="openDrawer()">✓ <span id="saved-count">0</span> saved</div>
+    </div>
+  </header>
+
+  <div id="card-area">
+    <div id="loading">
+      <div class="spinner"></div>
+      <span id="loading-msg">Fetching papers from Discord…</span>
+    </div>
+    <div id="done">
+      <div style="font-size:52px">🎉</div>
+      <h2>All caught up!</h2>
+      <p>You've reviewed all the papers. Refresh to check for new ones.</p>
+      <button class="refresh-btn" onclick="forceRefresh()">Refresh from Discord</button>
+    </div>
+  </div>
+
+  <div id="buttons" style="display:none">
+    <button class="btn btn-no"  onclick="swipeCard('no')">✕</button>
+    <button class="btn btn-yes" onclick="swipeCard('yes')">✓</button>
+  </div>
+</div>
+
+<!-- Saved drawer -->
+<div id="saved-drawer">
+  <div class="drawer-header">
+    <h2>Saved Papers</h2>
+    <button class="close-btn" onclick="closeDrawer()">✕</button>
+  </div>
+  <div id="saved-list"></div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let papers = [];
+let index = 0;
+let savedIds = JSON.parse(localStorage.getItem('savedPapers') || '[]');
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  updateSavedBadge();
+  fetchPapers('/api/papers');
+});
+
+async function fetchPapers(url) {
+  showLoading(url === '/api/refresh' ? 'Refreshing from Discord…' : 'Fetching papers from Discord…');
+  try {
+    const r = await fetch(url);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
+    papers = await r.json();
+    index = 0;
+    hideLoading();
+    renderCard();
+  } catch (e) {
+    document.getElementById('loading-msg').textContent = '⚠ ' + e.message;
+  }
+}
+
+function forceRefresh() {
+  fetchPapers('/api/refresh');
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderCard() {
+  // Clear old card
+  document.querySelectorAll('.card, .card-shadow, .swipe-label').forEach(el => el.remove());
+
+  if (index >= papers.length) {
+    document.getElementById('done').style.display = 'flex';
+    document.getElementById('buttons').style.display = 'none';
+    document.getElementById('counter').textContent = 'Done!';
+    return;
+  }
+
+  const area = document.getElementById('card-area');
+
+  // Shadow cards
+  for (let i = 0; i < 2; i++) {
+    const s = document.createElement('div');
+    s.className = 'card-shadow';
+    area.appendChild(s);
+  }
+
+  // Swipe labels
+  ['yes', 'no'].forEach(dir => {
+    const l = document.createElement('div');
+    l.className = `swipe-label ${dir}`;
+    l.id = `label-${dir}`;
+    l.textContent = dir === 'yes' ? 'READ' : 'SKIP';
+    area.appendChild(l);
+  });
+
+  const paper = papers[index];
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'active-card';
+
+  const affHTML = paper.affiliations && paper.affiliations.length
+    ? paper.affiliations.map(a => `<span class="aff-pill">${a}</span>`).join('')
+    : '<span class="no-aff">Affiliations not listed</span>';
+
+  const postedStr = paper.posted_at
+    ? new Date(paper.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  card.innerHTML = `
+    <div class="card-meta">
+      ${paper.year ? `<span class="year-badge">${paper.year}</span>` : ''}
+      <a class="arxiv-link" href="${paper.arxiv_url}" target="_blank" onclick="event.stopPropagation()">arxiv ↗</a>
+      ${postedStr ? `<span class="posted-date">posted ${postedStr}</span>` : ''}
+    </div>
+    <div class="card-title">${paper.title}</div>
+    <div class="affiliations">${affHTML}</div>
+    <div class="divider"></div>
+    <div class="tldr-label">TL;DR</div>
+    <div class="card-summary">${paper.summary}</div>
+    <div class="card-authors">${paper.authors.join(' · ')}</div>
+  `;
+
+  area.appendChild(card);
+  attachDragHandlers(card);
+
+  // Counter
+  document.getElementById('counter').textContent = `${index + 1} / ${papers.length}`;
+  document.getElementById('buttons').style.display = 'flex';
+  document.getElementById('done').style.display = 'none';
+}
+
+// ── Swipe logic ────────────────────────────────────────────────────────────
+const THRESHOLD = 80;
+let startX = 0, currentX = 0, isDragging = false;
+
+function attachDragHandlers(card) {
+  card.addEventListener('mousedown',  dragStart);
+  card.addEventListener('touchstart', dragStart, { passive: true });
+}
+
+function dragStart(e) {
+  isDragging = true;
+  currentX = 0;
+  startX = e.touches ? e.touches[0].clientX : e.clientX;
+  document.addEventListener('mousemove', dragMove);
+  document.addEventListener('touchmove', dragMove, { passive: false });
+  document.addEventListener('mouseup',  dragEnd);
+  document.addEventListener('touchend', dragEnd);
+}
+
+function dragMove(e) {
+  if (!isDragging) return;
+  if (e.cancelable) e.preventDefault();
+
+  const x = e.touches ? e.touches[0].clientX : e.clientX;
+  currentX = x - startX;
+  const rot = currentX * 0.07;
+  const card = document.getElementById('active-card');
+  if (!card) return;
+
+  card.style.transform = `translateX(${currentX}px) rotate(${rot}deg)`;
+  card.style.transition = 'none';
+
+  const prog = Math.abs(currentX) / THRESHOLD;
+  const yesLabel = document.getElementById('label-yes');
+  const noLabel  = document.getElementById('label-no');
+  if (currentX > 0) {
+    if (yesLabel) yesLabel.style.opacity = Math.min(prog, 1);
+    if (noLabel)  noLabel.style.opacity  = 0;
+    card.className = 'card' + (prog > 0.3 ? ' tint-yes' : '');
+  } else {
+    if (noLabel)  noLabel.style.opacity  = Math.min(prog, 1);
+    if (yesLabel) yesLabel.style.opacity = 0;
+    card.className = 'card' + (prog > 0.3 ? ' tint-no' : '');
+  }
+}
+
+function dragEnd() {
+  if (!isDragging) return;
+  isDragging = false;
+  document.removeEventListener('mousemove', dragMove);
+  document.removeEventListener('touchmove', dragMove);
+  document.removeEventListener('mouseup',  dragEnd);
+  document.removeEventListener('touchend', dragEnd);
+
+  const card = document.getElementById('active-card');
+  if (!card) return;
+
+  if (Math.abs(currentX) >= THRESHOLD) {
+    swipeCard(currentX > 0 ? 'yes' : 'no');
+  } else {
+    // Snap back
+    card.style.transition = 'transform 0.35s cubic-bezier(.175,.885,.32,1.275)';
+    card.style.transform = '';
+    card.className = 'card';
+    ['label-yes', 'label-no'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.opacity = 0;
+    });
+  }
+}
+
+function swipeCard(dir) {
+  const card = document.getElementById('active-card');
+  if (!card) return;
+
+  const paper = papers[index];
+
+  // Mark seen on server (both yes and no) so it never shows again
+  fetch(`/api/seen/${paper.id}`, { method: 'POST' });
+
+  if (dir === 'yes') {
+    if (!savedIds.includes(paper.id)) {
+      savedIds.push(paper.id);
+      localStorage.setItem('savedPapers', JSON.stringify(savedIds));
+    }
+    updateSavedBadge();
+  }
+
+  card.style.transition = 'transform 0.38s ease-in, opacity 0.38s ease-in';
+  card.style.transform = dir === 'yes'
+    ? 'translateX(130%) rotate(20deg)'
+    : 'translateX(-130%) rotate(-20deg)';
+  card.style.opacity = '0';
+
+  ['label-yes', 'label-no'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = 0;
+  });
+
+  setTimeout(() => {
+    index++;
+    renderCard();
+  }, 380);
+}
+
+// ── Saved badge ────────────────────────────────────────────────────────────
+function updateSavedBadge() {
+  const badge = document.getElementById('saved-badge');
+  const countEl = document.getElementById('saved-count');
+  savedIds = JSON.parse(localStorage.getItem('savedPapers') || '[]');
+  countEl.textContent = savedIds.length;
+  badge.classList.toggle('visible', savedIds.length > 0);
+}
+
+// ── Saved drawer ───────────────────────────────────────────────────────────
+function openDrawer() {
+  const list = document.getElementById('saved-list');
+  list.innerHTML = '';
+
+  const savedPapers = papers.filter(p => savedIds.includes(p.id));
+
+  if (!savedPapers.length) {
+    list.innerHTML = '<div class="empty-saved">No saved papers yet.<br>Tap ✓ on papers you want to keep.</div>';
+  } else {
+    savedPapers.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'saved-item';
+      item.innerHTML = `
+        <div class="saved-item-title">${p.title}</div>
+        <div class="saved-item-links">
+          <a class="saved-link" href="${p.arxiv_url}"  target="_blank">Abstract ↗</a>
+          <a class="saved-link" href="${p.pdf_url}"    target="_blank">PDF ↗</a>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  document.getElementById('saved-drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('saved-drawer').classList.remove('open');
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('buttons').style.display = 'none';
+  document.getElementById('done').style.display = 'none';
+  document.querySelectorAll('.card, .card-shadow, .swipe-label').forEach(el => el.remove());
+}
+
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+
+// Keyboard shortcuts (for desktop)
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft')  swipeCard('no');
+  if (e.key === 'ArrowRight') swipeCard('yes');
+});
+</script>
+</body>
+</html>
