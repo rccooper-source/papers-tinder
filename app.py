@@ -160,10 +160,10 @@ async def fetch_arxiv_paper(arxiv_id: str) -> dict | None:
     """Fetch paper metadata from arxiv API (no rate limits)."""
     import xml.etree.ElementTree as ET
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         try:
             r = await client.get(
-                f"http://export.arxiv.org/api/query?id_list={arxiv_id}",
+                f"https://export.arxiv.org/api/query?id_list={arxiv_id}",
                 timeout=15,
             )
             if r.status_code != 200:
