@@ -10,10 +10,10 @@
     :root {
       --bg: #080808;
       --card: #141414;
-      --card2: #1a1a1a;
+      --card2: #1c1c1c;
       --border: #2a2a2a;
       --text: #f0f0f0;
-      --muted: #888;
+      --muted: #777;
       --dim: #444;
       --yes: #22c55e;
       --no: #ef4444;
@@ -29,116 +29,226 @@
       touch-action: none;
     }
 
-    /* ── Layout ──────────────────────────────────────────────── */
-    #app {
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-    }
+    /* ── Views ───────────────────────────────────────────────── */
+    .view { display: none; height: 100dvh; flex-direction: column; }
+    .view.active { display: flex; }
 
-    /* ── Header ──────────────────────────────────────────────── */
-    header {
+    /* ── Shared header ───────────────────────────────────────── */
+    .top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px 6px;
+      padding: 10px 16px 6px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 16px; font-weight: 800; }
+    .logo span { color: var(--accent); }
+    .top-bar-right { display: flex; gap: 8px; align-items: center; }
+    .pill {
+      font-size: 11px;
+      border-radius: 20px;
+      padding: 3px 10px;
+      border: 1px solid var(--border);
+      background: var(--card2);
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .pill.accent  { color: var(--accent); border-color: rgba(139,92,246,.4); background: rgba(139,92,246,.1); }
+    .pill.back    { color: var(--text);   border-color: #444; }
+
+    /* ════════════════════════════════════════════════════════════
+       HOME VIEW
+    ═══════════════════════════════════════════════════════════ */
+    #home-list {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 8px 12px 20px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 10px 4px 6px;
+    }
+
+    .paper-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color .15s;
+    }
+    .paper-row:active { border-color: #555; background: var(--card2); }
+    .paper-row.decision-yes { border-left: 3px solid var(--yes); }
+    .paper-row.decision-no  { border-left: 3px solid var(--no); }
+
+    .row-status {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      margin-top: 1px;
+    }
+    .row-status.unread { background: rgba(139,92,246,.15); border: 1px solid rgba(139,92,246,.3); color: var(--accent); }
+    .row-status.yes    { background: rgba(34,197,94,.15);  border: 1px solid rgba(34,197,94,.3);  color: var(--yes); }
+    .row-status.no     { background: rgba(239,68,68,.15);  border: 1px solid rgba(239,68,68,.3);  color: var(--no); }
+
+    .row-body { flex: 1; min-width: 0; }
+    .row-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .row-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .row-chevron {
+      flex-shrink: 0;
+      color: var(--dim);
+      font-size: 14px;
+      align-self: center;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
       flex-shrink: 0;
     }
-    .logo {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
+    .audio-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #f97316;
+      background: rgba(249,115,22,.12);
+      border: 1px solid rgba(249,115,22,.3);
+      border-radius: 14px;
+      padding: 3px 8px;
+      text-decoration: none;
+      white-space: nowrap;
     }
-    .logo span { color: var(--accent); }
-    .counter {
-      font-size: 13px;
-      color: var(--muted);
-      background: #1e1e1e;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 12px;
-    }
-    .saved-badge {
-      font-size: 13px;
-      color: var(--yes);
-      background: rgba(34,197,94,.12);
-      border: 1px solid rgba(34,197,94,.25);
-      border-radius: 20px;
-      padding: 4px 12px;
-      cursor: pointer;
-      display: none;
-    }
-    .saved-badge.visible { display: inline-block; }
+    .audio-btn:hover { background: rgba(249,115,22,.2); }
 
-    /* ── Card area ───────────────────────────────────────────── */
+    /* ════════════════════════════════════════════════════════════
+       CARD VIEW  (swipe + detail)
+    ═══════════════════════════════════════════════════════════ */
     #card-area {
       flex: 1;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 16px;
+      padding: 4px 14px;
     }
 
-    /* Shadow cards behind the active one */
+    /* Shadow cards */
     .card-shadow {
       position: absolute;
-      width: calc(100% - 32px);
+      width: calc(100% - 28px);
       max-width: 420px;
       height: 92%;
       background: var(--card2);
-      border-radius: 20px;
+      border-radius: 18px;
       border: 1px solid var(--border);
       z-index: 0;
     }
     .card-shadow:nth-child(1) { transform: scale(0.93) translateY(12px); opacity: 0.5; }
     .card-shadow:nth-child(2) { transform: scale(0.96) translateY(6px);  opacity: 0.75; }
 
-    /* Main card */
     .card {
       position: absolute;
-      width: calc(100% - 32px);
+      width: calc(100% - 28px);
       max-width: 420px;
       background: var(--card);
-      border-radius: 20px;
+      border-radius: 18px;
       border: 1px solid var(--border);
-      padding: 24px 22px 20px;
+      padding: 16px 18px 14px;
       z-index: 10;
-      cursor: grab;
-      user-select: none;
       will-change: transform;
       box-shadow: 0 24px 64px rgba(0,0,0,.6);
     }
-    .card:active { cursor: grabbing; }
+    .card.swipeable { cursor: grab; user-select: none; }
+    .card.swipeable:active { cursor: grabbing; }
 
-    /* Swipe overlay tint */
+    /* allow text selection in content */
+    .card-title, .card-summary, .card-authors, .aff-pill {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .card.swipeable .card-title,
+    .card.swipeable .card-summary,
+    .card.swipeable .card-authors,
+    .card.swipeable .aff-pill {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Swipe tint overlay */
     .card::after {
       content: '';
       position: absolute;
       inset: 0;
-      border-radius: 20px;
+      border-radius: 18px;
       opacity: 0;
       pointer-events: none;
-      transition: opacity .1s;
     }
-    .card.tint-yes::after  { background: rgba(34,197,94,.15); opacity: 1; }
-    .card.tint-no::after   { background: rgba(239,68,68,.15);  opacity: 1; }
+    .card.tint-yes::after { background: rgba(34,197,94,.15);  opacity: 1; }
+    .card.tint-no::after  { background: rgba(239,68,68,.15);  opacity: 1; }
+
+    /* Decision highlight for read-only view */
+    .card.decided-yes { border-color: var(--yes); box-shadow: 0 0 0 1px var(--yes), 0 24px 64px rgba(0,0,0,.6); }
+    .card.decided-no  { border-color: var(--no);  box-shadow: 0 0 0 1px var(--no),  0 24px 64px rgba(0,0,0,.6); }
+
+    .decision-banner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 10px;
+    }
+    .decision-banner.yes { background: rgba(34,197,94,.12);  color: var(--yes); border: 1px solid rgba(34,197,94,.25); }
+    .decision-banner.no  { background: rgba(239,68,68,.12);  color: var(--no);  border: 1px solid rgba(239,68,68,.25); }
 
     /* Swipe labels */
     .swipe-label {
       position: absolute;
       top: 22px;
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 900;
       letter-spacing: 2px;
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 8px;
       border: 3px solid;
       opacity: 0;
       pointer-events: none;
       z-index: 20;
       text-transform: uppercase;
-      transition: opacity .08s;
     }
     .swipe-label.yes { right: 22px; color: var(--yes); border-color: var(--yes); }
     .swipe-label.no  { left:  22px; color: var(--no);  border-color: var(--no);  }
@@ -147,250 +257,166 @@
     .card-meta {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 6px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
     }
     .year-badge {
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 10px; font-weight: 700;
       color: var(--accent);
       background: rgba(139,92,246,.15);
       border: 1px solid rgba(139,92,246,.3);
-      border-radius: 20px;
-      padding: 3px 10px;
-      text-transform: uppercase;
+      border-radius: 20px; padding: 2px 8px;
       letter-spacing: .5px;
     }
-    .arxiv-link {
-      font-size: 11px;
-      color: var(--muted);
-      text-decoration: none;
-      background: #1e1e1e;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 10px;
-    }
-    .arxiv-link:hover { color: var(--text); border-color: #555; }
-    .posted-date {
-      font-size: 11px;
-      color: var(--dim);
-      margin-left: auto;
-    }
+    .posted-date { font-size: 10px; color: var(--dim); margin-left: auto; }
 
     .card-title {
-      font-size: 19px;
-      font-weight: 700;
-      line-height: 1.35;
-      margin-bottom: 14px;
-      color: var(--text);
+      font-size: 15px; font-weight: 700;
+      line-height: 1.3; margin-bottom: 9px; color: var(--text);
     }
-
     .affiliations {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 14px;
-      min-height: 0;
+      display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px;
     }
     .aff-pill {
-      font-size: 12px;
-      color: #aaa;
-      background: #1e1e1e;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 10px;
+      font-size: 11px; color: #aaa;
+      background: #1e1e1e; border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 8px;
     }
-    .no-aff {
-      font-size: 12px;
-      color: var(--dim);
-      font-style: italic;
-    }
+    .no-aff { font-size: 11px; color: var(--dim); font-style: italic; }
 
-    .divider { height: 1px; background: var(--border); margin-bottom: 14px; }
+    .divider { height: 1px; background: var(--border); margin-bottom: 9px; }
 
     .tldr-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: var(--dim);
-      text-transform: uppercase;
-      margin-bottom: 6px;
+      font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--dim); text-transform: uppercase; margin-bottom: 5px;
     }
-    .card-summary {
-      font-size: 16px;
-      line-height: 1.65;
-      color: #ccc;
-    }
+    .card-summary { font-size: 13px; line-height: 1.55; color: #ccc; }
 
-    .card-authors {
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--dim);
-      line-height: 1.5;
+    .card-footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-top: 10px; gap: 8px;
     }
-
-    /* ── Buttons ─────────────────────────────────────────────── */
-    #buttons {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 32px;
-      padding: 12px 20px 28px;
+    .card-authors { font-size: 11px; color: var(--dim); line-height: 1.4; flex: 1; }
+    .open-link {
+      font-size: 12px; font-weight: 600;
+      color: var(--accent); text-decoration: none;
+      background: rgba(139,92,246,.12);
+      border: 1px solid rgba(139,92,246,.3);
+      border-radius: 20px; padding: 4px 12px; white-space: nowrap;
       flex-shrink: 0;
     }
-    .btn {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      border: 2px solid;
-      background: var(--card);
+    .card-audio-link {
+      font-size: 12px; font-weight: 600;
+      color: #f97316; text-decoration: none;
+      background: rgba(249,115,22,.12);
+      border: 1px solid rgba(249,115,22,.3);
+      border-radius: 20px; padding: 4px 12px; white-space: nowrap;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
-      justify-content: center;
-      font-size: 26px;
-      cursor: pointer;
+      gap: 4px;
+    }
+
+    /* ── Swipe buttons ───────────────────────────────────────── */
+    #buttons {
+      display: flex; justify-content: center;
+      align-items: center; gap: 28px;
+      padding: 8px 20px 20px; flex-shrink: 0;
+    }
+    .btn {
+      width: 58px; height: 58px; border-radius: 50%; border: 2px solid;
+      background: var(--card); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 22px; cursor: pointer;
       transition: transform .1s, box-shadow .15s;
       -webkit-tap-highlight-color: transparent;
     }
     .btn:active { transform: scale(0.88); }
     .btn-no  { border-color: var(--no);  color: var(--no);  box-shadow: 0 4px 20px rgba(239,68,68,.2); }
     .btn-yes { border-color: var(--yes); color: var(--yes); box-shadow: 0 4px 20px rgba(34,197,94,.2); }
-    .btn-no:active  { box-shadow: 0 2px 12px rgba(239,68,68,.5); }
-    .btn-yes:active { box-shadow: 0 2px 12px rgba(34,197,94,.5); }
 
-    /* ── Loading ─────────────────────────────────────────────── */
+    /* ── Loading / Done ──────────────────────────────────────── */
     #loading {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      color: var(--muted);
-      font-size: 15px;
-      z-index: 100;
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; color: var(--muted); font-size: 15px; z-index: 100;
     }
     .spinner {
-      width: 44px; height: 44px;
-      border: 3px solid #2a2a2a;
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .75s linear infinite;
+      width: 40px; height: 40px;
+      border: 3px solid #2a2a2a; border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .75s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Done ────────────────────────────────────────────────── */
-    #done {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px 24px;
-      gap: 12px;
-      position: absolute;
-      inset: 0;
+    #swipe-done {
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 40px 24px; gap: 12px;
+      position: absolute; inset: 0;
     }
-    #done h2 { font-size: 28px; font-weight: 800; }
-    #done p  { color: var(--muted); font-size: 15px; max-width: 280px; }
-    .refresh-btn {
-      margin-top: 12px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 14px;
-      padding: 14px 28px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
+    #swipe-done h2 { font-size: 26px; font-weight: 800; }
+    #swipe-done p  { color: var(--muted); font-size: 14px; max-width: 280px; }
+    .action-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 14px; padding: 12px 24px;
+      font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px;
     }
-    .refresh-btn:active { opacity: .8; }
-
-    /* ── Saved drawer ────────────────────────────────────────── */
-    #saved-drawer {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.85);
-      z-index: 200;
-      display: none;
-      flex-direction: column;
-    }
-    #saved-drawer.open { display: flex; }
-    .drawer-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 20px 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    .drawer-header h2 { font-size: 18px; font-weight: 700; }
-    .close-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-size: 24px;
-      cursor: pointer;
-      padding: 4px 8px;
-    }
-    #saved-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .saved-item {
-      background: var(--card2);
+    .action-btn.outline {
+      background: transparent; color: var(--text);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 16px;
     }
-    .saved-item-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      line-height: 1.4;
-    }
-    .saved-item-links { display: flex; gap: 8px; }
-    .saved-link {
-      font-size: 12px;
-      color: var(--accent);
-      text-decoration: none;
-      background: rgba(139,92,246,.12);
-      border: 1px solid rgba(139,92,246,.25);
-      border-radius: 20px;
-      padding: 3px 10px;
-    }
-    .empty-saved {
-      text-align: center;
-      color: var(--muted);
-      padding: 40px 20px;
-      font-size: 15px;
-    }
+    .action-btn:active { opacity: .8; }
   </style>
 </head>
 <body>
-<div id="app">
-  <header>
+
+<!-- ══════════════════════════════════════════════════════════════
+     HOME VIEW
+═══════════════════════════════════════════════════════════════ -->
+<div id="view-home" class="view active">
+  <div class="top-bar">
     <div class="logo">Paper<span>Swipe</span></div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <div class="counter" id="counter">Loading…</div>
-      <div class="saved-badge" id="saved-badge" onclick="openDrawer()">✓ <span id="saved-count">0</span> saved</div>
+    <div class="top-bar-right">
+      <div class="pill" id="home-counter">Loading…</div>
+      <div class="pill accent" onclick="goSwipe()" id="swipe-btn" style="display:none">Swipe unread ›</div>
     </div>
-  </header>
+  </div>
+  <div id="home-list">
+    <div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted)">
+      <div>
+        <div class="spinner" style="margin:0 auto 12px"></div>
+        <div>Loading papers…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     CARD VIEW  (swipe queue or single-paper detail)
+═══════════════════════════════════════════════════════════════ -->
+<div id="view-card" class="view">
+  <div class="top-bar">
+    <div class="logo">Paper<span>Swipe</span></div>
+    <div class="top-bar-right">
+      <div class="pill" id="card-counter"></div>
+      <div class="pill back" onclick="goHome()">‹ Home</div>
+    </div>
+  </div>
 
   <div id="card-area">
-    <div id="loading">
+    <div id="loading" style="display:none">
       <div class="spinner"></div>
-      <span id="loading-msg">Fetching papers from Discord…</span>
+      <span id="loading-msg">Loading…</span>
     </div>
-    <div id="done">
-      <div style="font-size:52px">🎉</div>
+    <div id="swipe-done">
+      <div style="font-size:48px">🎉</div>
       <h2>All caught up!</h2>
-      <p>You've reviewed all the papers. Refresh to check for new ones.</p>
-      <button class="refresh-btn" onclick="forceRefresh()">Refresh from Discord</button>
+      <p>You've reviewed all the papers in the queue.</p>
+      <button class="action-btn" onclick="goHome()">Back to Home</button>
+      <button class="action-btn outline" onclick="forceRefresh()" style="margin-top:6px">Refresh from Discord</button>
     </div>
   </div>
 
@@ -400,60 +426,162 @@
   </div>
 </div>
 
-<!-- Saved drawer -->
-<div id="saved-drawer">
-  <div class="drawer-header">
-    <h2>Saved Papers</h2>
-    <button class="close-btn" onclick="closeDrawer()">✕</button>
-  </div>
-  <div id="saved-list"></div>
-</div>
-
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-let papers = [];
-let index = 0;
-let savedIds = JSON.parse(localStorage.getItem('savedPapers') || '[]');
+let allPapers = [];      // full list with decisions, for home
+let swipeQueue = [];     // unseen papers for swipe mode
+let swipeIndex = 0;
+let singlePaper = null;  // when viewing one paper from home
 
 // ── Boot ───────────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  updateSavedBadge();
-  fetchPapers('/api/papers');
-});
+window.addEventListener('load', loadHome);
 
-async function fetchPapers(url) {
-  showLoading(url === '/api/refresh' ? 'Refreshing from Discord…' : 'Fetching papers from Discord…');
+async function loadHome() {
   try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${r.status}`);
-    }
-    papers = await r.json();
-    index = 0;
-    hideLoading();
-    renderCard();
-  } catch (e) {
-    document.getElementById('loading-msg').textContent = '⚠ ' + e.message;
+    const r = await fetch('/api/all');
+    allPapers = await r.json();
+    renderHome();
+  } catch(e) {
+    document.getElementById('home-list').innerHTML =
+      `<div style="color:var(--no);padding:20px">Error: ${e.message}</div>`;
   }
 }
 
-function forceRefresh() {
-  fetchPapers('/api/refresh');
+// ── Home view ──────────────────────────────────────────────────────────────
+function renderHome() {
+  const unread = allPapers.filter(p => !p.read);
+  const read   = allPapers.filter(p =>  p.read);
+
+  document.getElementById('home-counter').textContent =
+    `${unread.length} unread · ${read.length} read`;
+
+  const swipeBtn = document.getElementById('swipe-btn');
+  swipeBtn.style.display = unread.length > 0 ? 'block' : 'none';
+
+  let html = '';
+
+  if (unread.length) {
+    html += `<div class="section-label">Unread (${unread.length})</div>`;
+    unread.forEach(p => { html += rowHTML(p); });
+  }
+
+  if (read.length) {
+    html += `<div class="section-label">Read (${read.length})</div>`;
+    read.forEach(p => { html += rowHTML(p); });
+  }
+
+  if (!allPapers.length) {
+    html = `<div style="text-align:center;color:var(--muted);padding:60px 20px">No papers yet.<br>Pull from Discord to get started.</div>`;
+  }
+
+  document.getElementById('home-list').innerHTML = html;
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function renderCard() {
-  // Clear old card
-  document.querySelectorAll('.card, .card-shadow, .swipe-label').forEach(el => el.remove());
+function rowHTML(p) {
+  const dateStr = p.posted_at
+    ? new Date(p.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+  const affStr = p.affiliations?.length ? p.affiliations[0] : '';
+  const meta = [dateStr, affStr].filter(Boolean).join(' · ');
 
-  if (index >= papers.length) {
-    document.getElementById('done').style.display = 'flex';
+  let statusIcon, statusClass, rowClass = '';
+  if (!p.read) {
+    statusIcon = '●'; statusClass = 'unread';
+  } else if (p.decision === 'yes') {
+    statusIcon = '✓'; statusClass = 'yes'; rowClass = 'decision-yes';
+  } else {
+    statusIcon = '✕'; statusClass = 'no'; rowClass = 'decision-no';
+  }
+
+  const audioBtn = p.audio_url
+    ? `<a class="audio-btn" href="${p.audio_url}" target="_blank" onclick="event.stopPropagation()">🎧 Listen</a>`
+    : '';
+
+  return `
+    <div class="paper-row ${rowClass}" onclick="openPaper('${p.id}')">
+      <div class="row-status ${statusClass}">${statusIcon}</div>
+      <div class="row-body">
+        <div class="row-title">${p.title}</div>
+        ${meta ? `<div class="row-meta">${meta}</div>` : ''}
+      </div>
+      <div class="row-actions">
+        ${audioBtn}
+        <div class="row-chevron">›</div>
+      </div>
+    </div>`;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome() {
+  singlePaper = null;
+  showView('view-home');
+  loadHome(); // refresh list in case decisions changed
+}
+
+function goSwipe() {
+  singlePaper = null;
+  swipeQueue = allPapers.filter(p => !p.read);
+  swipeIndex = 0;
+  showView('view-card');
+  document.getElementById('buttons').style.display = 'flex';
+  document.getElementById('swipe-done').style.display = 'none';
+  renderCard();
+}
+
+function openPaper(id) {
+  const paper = allPapers.find(p => p.id === id);
+  if (!paper) return;
+  singlePaper = paper;
+  showView('view-card');
+  document.getElementById('buttons').style.display = 'flex';
+  document.getElementById('swipe-done').style.display = 'none';
+  renderSingleCard(paper);
+}
+
+// ── Render single (read-only or swipeable) card ────────────────────────────
+function renderSingleCard(paper) {
+  clearCards();
+  document.getElementById('card-counter').textContent = '';
+
+  const card = buildCardEl(paper);
+  
+  // Show decision banner if already rated
+  if (paper.read && paper.decision) {
+    const decClass = paper.decision === 'yes' ? 'yes' : 'no';
+    const decText  = paper.decision === 'yes' ? '✓ Saved — swipe to change' : '✕ Skipped — swipe to change';
+    const banner   = `<div class="decision-banner ${decClass}">${decText}</div>`;
+    card.innerHTML = banner + card.innerHTML;
+    card.classList.add(`decided-${paper.decision}`);
+  }
+  
+  // Always allow swiping (to rate or re-rate)
+  card.classList.add('swipeable');
+  attachDragHandlers(card);
+  swipeQueue = [paper];
+  swipeIndex = 0;
+  document.getElementById('buttons').style.display = 'flex';
+  addSwipeLabels();
+  
+  document.getElementById('card-area').appendChild(card);
+}
+
+// ── Render swipe queue card ────────────────────────────────────────────────
+function renderCard() {
+  clearCards();
+
+  if (swipeIndex >= swipeQueue.length) {
+    document.getElementById('swipe-done').style.display = 'flex';
     document.getElementById('buttons').style.display = 'none';
-    document.getElementById('counter').textContent = 'Done!';
+    document.getElementById('card-counter').textContent = 'Done!';
     return;
   }
 
+  const paper = swipeQueue[swipeIndex];
   const area = document.getElementById('card-area');
 
   // Shadow cards
@@ -463,49 +591,65 @@ function renderCard() {
     area.appendChild(s);
   }
 
-  // Swipe labels
-  ['yes', 'no'].forEach(dir => {
+  addSwipeLabels();
+
+  const card = buildCardEl(paper);
+  card.classList.add('swipeable');
+  area.appendChild(card);
+  attachDragHandlers(card);
+
+  document.getElementById('card-counter').textContent =
+    `${swipeIndex + 1} / ${swipeQueue.length}`;
+}
+
+function addSwipeLabels() {
+  const area = document.getElementById('card-area');
+  ['yes','no'].forEach(dir => {
     const l = document.createElement('div');
     l.className = `swipe-label ${dir}`;
     l.id = `label-${dir}`;
-    l.textContent = dir === 'yes' ? 'READ' : 'SKIP';
+    l.textContent = dir === 'yes' ? 'SAVE' : 'SKIP';
     area.appendChild(l);
   });
+}
 
-  const paper = papers[index];
+function buildCardEl(paper) {
   const card = document.createElement('div');
   card.className = 'card';
   card.id = 'active-card';
 
-  const affHTML = paper.affiliations && paper.affiliations.length
+  const affHTML = paper.affiliations?.length
     ? paper.affiliations.map(a => `<span class="aff-pill">${a}</span>`).join('')
     : '<span class="no-aff">Affiliations not listed</span>';
 
-  const postedStr = paper.posted_at
+  const dateStr = paper.posted_at
     ? new Date(paper.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
+
+  const audioLink = paper.audio_url
+    ? `<a class="card-audio-link" href="${paper.audio_url}" target="_blank" onclick="event.stopPropagation()">🎧 Listen</a>`
+    : '';
 
   card.innerHTML = `
     <div class="card-meta">
       ${paper.year ? `<span class="year-badge">${paper.year}</span>` : ''}
-      <a class="arxiv-link" href="${paper.arxiv_url}" target="_blank" onclick="event.stopPropagation()">arxiv ↗</a>
-      ${postedStr ? `<span class="posted-date">posted ${postedStr}</span>` : ''}
+      ${dateStr ? `<span class="posted-date">${dateStr}</span>` : ''}
     </div>
     <div class="card-title">${paper.title}</div>
     <div class="affiliations">${affHTML}</div>
     <div class="divider"></div>
-    <div class="tldr-label">TL;DR</div>
+    <div class="tldr-label">Summary</div>
     <div class="card-summary">${paper.summary}</div>
-    <div class="card-authors">${paper.authors.join(' · ')}</div>
-  `;
+    <div class="card-footer">
+      <div class="card-authors">${paper.authors.join(' · ')}</div>
+      ${audioLink}
+      <a class="open-link" href="${paper.arxiv_url}" target="_blank" onclick="event.stopPropagation()">Open ↗</a>
+    </div>`;
+  return card;
+}
 
-  area.appendChild(card);
-  attachDragHandlers(card);
-
-  // Counter
-  document.getElementById('counter').textContent = `${index + 1} / ${papers.length}`;
-  document.getElementById('buttons').style.display = 'flex';
-  document.getElementById('done').style.display = 'none';
+function clearCards() {
+  document.querySelectorAll('.card, .card-shadow, .swipe-label').forEach(el => el.remove());
 }
 
 // ── Swipe logic ────────────────────────────────────────────────────────────
@@ -518,39 +662,34 @@ function attachDragHandlers(card) {
 }
 
 function dragStart(e) {
-  isDragging = true;
-  currentX = 0;
+  isDragging = true; currentX = 0;
   startX = e.touches ? e.touches[0].clientX : e.clientX;
   document.addEventListener('mousemove', dragMove);
   document.addEventListener('touchmove', dragMove, { passive: false });
-  document.addEventListener('mouseup',  dragEnd);
-  document.addEventListener('touchend', dragEnd);
+  document.addEventListener('mouseup',   dragEnd);
+  document.addEventListener('touchend',  dragEnd);
 }
 
 function dragMove(e) {
   if (!isDragging) return;
   if (e.cancelable) e.preventDefault();
-
   const x = e.touches ? e.touches[0].clientX : e.clientX;
   currentX = x - startX;
-  const rot = currentX * 0.07;
   const card = document.getElementById('active-card');
   if (!card) return;
-
-  card.style.transform = `translateX(${currentX}px) rotate(${rot}deg)`;
+  card.style.transform = `translateX(${currentX}px) rotate(${currentX * 0.07}deg)`;
   card.style.transition = 'none';
-
   const prog = Math.abs(currentX) / THRESHOLD;
-  const yesLabel = document.getElementById('label-yes');
-  const noLabel  = document.getElementById('label-no');
+  const yL = document.getElementById('label-yes');
+  const nL = document.getElementById('label-no');
   if (currentX > 0) {
-    if (yesLabel) yesLabel.style.opacity = Math.min(prog, 1);
-    if (noLabel)  noLabel.style.opacity  = 0;
-    card.className = 'card' + (prog > 0.3 ? ' tint-yes' : '');
+    if (yL) yL.style.opacity = Math.min(prog, 1);
+    if (nL) nL.style.opacity = 0;
+    card.className = 'card swipeable' + (prog > 0.3 ? ' tint-yes' : '');
   } else {
-    if (noLabel)  noLabel.style.opacity  = Math.min(prog, 1);
-    if (yesLabel) yesLabel.style.opacity = 0;
-    card.className = 'card' + (prog > 0.3 ? ' tint-no' : '');
+    if (nL) nL.style.opacity = Math.min(prog, 1);
+    if (yL) yL.style.opacity = 0;
+    card.className = 'card swipeable' + (prog > 0.3 ? ' tint-no' : '');
   }
 }
 
@@ -559,22 +698,18 @@ function dragEnd() {
   isDragging = false;
   document.removeEventListener('mousemove', dragMove);
   document.removeEventListener('touchmove', dragMove);
-  document.removeEventListener('mouseup',  dragEnd);
-  document.removeEventListener('touchend', dragEnd);
-
+  document.removeEventListener('mouseup',   dragEnd);
+  document.removeEventListener('touchend',  dragEnd);
   const card = document.getElementById('active-card');
   if (!card) return;
-
   if (Math.abs(currentX) >= THRESHOLD) {
     swipeCard(currentX > 0 ? 'yes' : 'no');
   } else {
-    // Snap back
     card.style.transition = 'transform 0.35s cubic-bezier(.175,.885,.32,1.275)';
     card.style.transform = '';
-    card.className = 'card';
-    ['label-yes', 'label-no'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.opacity = 0;
+    card.className = 'card swipeable';
+    ['label-yes','label-no'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.opacity = 0;
     });
   }
 }
@@ -583,93 +718,59 @@ function swipeCard(dir) {
   const card = document.getElementById('active-card');
   if (!card) return;
 
-  const paper = papers[index];
+  const paper = swipeQueue[swipeIndex];
+  fetch(`/api/seen/${paper.id}?decision=${dir}`, { method: 'POST' });
 
-  // Mark seen on server (both yes and no) so it never shows again
-  fetch(`/api/seen/${paper.id}`, { method: 'POST' });
+  // Update local state so home reflects immediately
+  const ap = allPapers.find(p => p.id === paper.id);
+  if (ap) { ap.read = true; ap.decision = dir; }
 
-  if (dir === 'yes') {
-    if (!savedIds.includes(paper.id)) {
-      savedIds.push(paper.id);
-      localStorage.setItem('savedPapers', JSON.stringify(savedIds));
-    }
-    updateSavedBadge();
-  }
-
+  ['label-yes','label-no'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.opacity = 0;
+  });
   card.style.transition = 'transform 0.38s ease-in, opacity 0.38s ease-in';
-  card.style.transform = dir === 'yes'
-    ? 'translateX(130%) rotate(20deg)'
-    : 'translateX(-130%) rotate(-20deg)';
+  card.style.transform = dir === 'yes' ? 'translateX(130%) rotate(20deg)' : 'translateX(-130%) rotate(-20deg)';
   card.style.opacity = '0';
 
-  ['label-yes', 'label-no'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.opacity = 0;
-  });
-
   setTimeout(() => {
-    index++;
-    renderCard();
+    if (singlePaper) {
+      goHome();
+    } else {
+      swipeIndex++;
+      renderCard();
+    }
   }, 380);
 }
 
-// ── Saved badge ────────────────────────────────────────────────────────────
-function updateSavedBadge() {
-  const badge = document.getElementById('saved-badge');
-  const countEl = document.getElementById('saved-count');
-  savedIds = JSON.parse(localStorage.getItem('savedPapers') || '[]');
-  countEl.textContent = savedIds.length;
-  badge.classList.toggle('visible', savedIds.length > 0);
+async function forceRefresh() {
+  document.getElementById('swipe-done').style.display = 'none';
+  showLoading('Refreshing from Discord…');
+  const r = await fetch('/api/refresh');
+  const fresh = await r.json();
+  swipeQueue = fresh;
+  swipeIndex = 0;
+  hideLoading();
+  renderCard();
 }
 
-// ── Saved drawer ───────────────────────────────────────────────────────────
-function openDrawer() {
-  const list = document.getElementById('saved-list');
-  list.innerHTML = '';
-
-  const savedPapers = papers.filter(p => savedIds.includes(p.id));
-
-  if (!savedPapers.length) {
-    list.innerHTML = '<div class="empty-saved">No saved papers yet.<br>Tap ✓ on papers you want to keep.</div>';
-  } else {
-    savedPapers.forEach(p => {
-      const item = document.createElement('div');
-      item.className = 'saved-item';
-      item.innerHTML = `
-        <div class="saved-item-title">${p.title}</div>
-        <div class="saved-item-links">
-          <a class="saved-link" href="${p.arxiv_url}"  target="_blank">Abstract ↗</a>
-          <a class="saved-link" href="${p.pdf_url}"    target="_blank">PDF ↗</a>
-        </div>
-      `;
-      list.appendChild(item);
-    });
-  }
-
-  document.getElementById('saved-drawer').classList.add('open');
-}
-
-function closeDrawer() {
-  document.getElementById('saved-drawer').classList.remove('open');
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 function showLoading(msg) {
-  document.getElementById('loading').style.display = 'flex';
+  const l = document.getElementById('loading');
+  l.style.display = 'flex';
   document.getElementById('loading-msg').textContent = msg;
   document.getElementById('buttons').style.display = 'none';
-  document.getElementById('done').style.display = 'none';
-  document.querySelectorAll('.card, .card-shadow, .swipe-label').forEach(el => el.remove());
+  clearCards();
 }
-
 function hideLoading() {
   document.getElementById('loading').style.display = 'none';
 }
 
-// Keyboard shortcuts (for desktop)
+// Keyboard shortcuts (desktop)
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft')  swipeCard('no');
-  if (e.key === 'ArrowRight') swipeCard('yes');
+  if (document.getElementById('view-card').classList.contains('active')) {
+    if (e.key === 'ArrowLeft')  swipeCard('no');
+    if (e.key === 'ArrowRight') swipeCard('yes');
+    if (e.key === 'Escape')     goHome();
+  }
 });
 </script>
 </body>
