@@ -119,7 +119,9 @@ async def fetch_discord_messages(days_back: int = 7) -> list:
             for msg in batch:
                 ts = msg.get("timestamp", "")
                 if ts:
-                    msg_time = datetime.fromisoformat(ts.replace("Z", "+00:00").replace("+00:00", ""))
+                    # Parse Discord ISO timestamp (e.g., "2026-03-31T22:15:30.123456+00:00")
+                    ts_clean = ts.replace("Z", "+00:00")
+                    msg_time = datetime.fromisoformat(ts_clean).replace(tzinfo=None)
                     if msg_time < cutoff:
                         return all_messages
                 all_messages.append(msg)
@@ -154,15 +156,22 @@ def extract_arxiv_ids(messages: list) -> list:
 
 # ── Semantic Scholar ──────────────────────────────────────────────────────────
 
-async def fetch_s2_paper(arxiv_id: str) -> dict | None:
+async def fetch_s2_paper(arxiv_id: str, retries: int = 3) -> dict | None:
+    """Fetch paper from Semantic Scholar with retry on rate limit."""
     async with httpx.AsyncClient() as client:
-        r = await client.get(
-            f"https://api.semanticscholar.org/graph/v1/paper/arXiv:{arxiv_id}",
-            params={"fields": "title,authors,year,abstract"},
-            timeout=10,
-        )
-        if r.status_code == 200:
-            return r.json()
+        for attempt in range(retries):
+            r = await client.get(
+                f"https://api.semanticscholar.org/graph/v1/paper/arXiv:{arxiv_id}",
+                params={"fields": "title,authors,year,abstract"},
+                timeout=10,
+            )
+            if r.status_code == 200:
+                return r.json()
+            if r.status_code == 429:
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                await asyncio.sleep(wait)
+                continue
+            break
     return None
 
 
@@ -259,7 +268,7 @@ async def build_papers(days_back: int = 7) -> list:
             "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}",
             "posted_at": entry["posted_at"],
         })
-        await asyncio.sleep(0.35)
+        await asyncio.sleep(1.5)  # Semantic Scholar rate limit: ~1 req/sec
     return papers
 
 
