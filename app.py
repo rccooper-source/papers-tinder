@@ -154,31 +154,63 @@ def extract_arxiv_ids(messages: list) -> list:
     return results
 
 
-# ── Semantic Scholar ──────────────────────────────────────────────────────────
+# ── ArXiv API ────────────────────────────────────────────────────────────────
 
-async def fetch_s2_paper(arxiv_id: str, retries: int = 5) -> dict | None:
-    """Fetch paper from Semantic Scholar with retry on rate limit."""
+async def fetch_arxiv_paper(arxiv_id: str) -> dict | None:
+    """Fetch paper metadata from arxiv API (no rate limits)."""
+    import xml.etree.ElementTree as ET
+    
     async with httpx.AsyncClient() as client:
-        for attempt in range(retries):
-            try:
-                r = await client.get(
-                    f"https://api.semanticscholar.org/graph/v1/paper/arXiv:{arxiv_id}",
-                    params={"fields": "title,authors,year,abstract"},
-                    timeout=15,
-                )
-                if r.status_code == 200:
-                    return r.json()
-                if r.status_code == 429:
-                    wait = 3 * (2 ** attempt)  # 3s, 6s, 12s, 24s, 48s
-                    await asyncio.sleep(wait)
-                    continue
-                if r.status_code == 404:
-                    return None  # Paper not indexed yet
-            except Exception:
-                await asyncio.sleep(2)
-                continue
-            break
-    return None
+        try:
+            r = await client.get(
+                f"http://export.arxiv.org/api/query?id_list={arxiv_id}",
+                timeout=15,
+            )
+            if r.status_code != 200:
+                return None
+            
+            root = ET.fromstring(r.text)
+            ns = {"atom": "http://www.w3.org/2005/Atom"}
+            entry = root.find("atom:entry", ns)
+            if entry is None:
+                return None
+            
+            title_el = entry.find("atom:title", ns)
+            abstract_el = entry.find("atom:summary", ns)
+            published_el = entry.find("atom:published", ns)
+            
+            title = title_el.text.strip().replace("\n", " ") if title_el is not None else None
+            if not title or title == "Error":
+                return None
+                
+            abstract = abstract_el.text.strip().replace("\n", " ") if abstract_el is not None else ""
+            
+            authors = []
+            for author in entry.findall("atom:author", ns):
+                name_el = author.find("atom:name", ns)
+                if name_el is not None:
+                    authors.append({"name": name_el.text})
+            
+            year = None
+            if published_el is not None:
+                year = int(published_el.text[:4])
+            
+            # Try to get affiliations from author tags (arxiv doesn't always have these)
+            affiliations = []
+            for author in entry.findall("atom:author", ns):
+                aff_el = author.find("{http://arxiv.org/schemas/atom}affiliation", ns)
+                if aff_el is not None and aff_el.text:
+                    affiliations.append(aff_el.text)
+            
+            return {
+                "title": title,
+                "abstract": abstract,
+                "authors": authors,
+                "year": year,
+                "affiliations": list(dict.fromkeys(affiliations))[:4],
+            }
+        except Exception:
+            return None
 
 
 # ── Summarization ─────────────────────────────────────────────────────────────
@@ -250,7 +282,7 @@ async def build_papers(days_back: int = 7) -> list:
     papers = []
     for entry in entries:
         arxiv_id = entry["arxiv_id"]
-        data = await fetch_s2_paper(arxiv_id)
+        data = await fetch_arxiv_paper(arxiv_id)
         if not data or not data.get("title"):
             continue
         title = data["title"]
@@ -259,9 +291,7 @@ async def build_papers(days_back: int = 7) -> list:
         author_names = [a["name"] for a in authors_raw[:5]]
         if len(authors_raw) > 5:
             author_names.append(f"+ {len(authors_raw) - 5} more")
-        affiliations = list(dict.fromkeys(
-            aff for a in authors_raw[:8] for aff in a.get("affiliations", [])
-        ))[:4]
+        affiliations = data.get("affiliations", [])
         summary = await summarize(title, abstract)
         papers.append({
             "id": arxiv_id,
@@ -274,7 +304,7 @@ async def build_papers(days_back: int = 7) -> list:
             "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}",
             "posted_at": entry["posted_at"],
         })
-        await asyncio.sleep(3)  # Semantic Scholar rate limit is strict
+        await asyncio.sleep(0.5)  # arxiv API has no strict rate limit
     return papers
 
 
