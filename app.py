@@ -156,20 +156,26 @@ def extract_arxiv_ids(messages: list) -> list:
 
 # ── Semantic Scholar ──────────────────────────────────────────────────────────
 
-async def fetch_s2_paper(arxiv_id: str, retries: int = 3) -> dict | None:
+async def fetch_s2_paper(arxiv_id: str, retries: int = 5) -> dict | None:
     """Fetch paper from Semantic Scholar with retry on rate limit."""
     async with httpx.AsyncClient() as client:
         for attempt in range(retries):
-            r = await client.get(
-                f"https://api.semanticscholar.org/graph/v1/paper/arXiv:{arxiv_id}",
-                params={"fields": "title,authors,year,abstract"},
-                timeout=10,
-            )
-            if r.status_code == 200:
-                return r.json()
-            if r.status_code == 429:
-                wait = 2 ** attempt  # 1s, 2s, 4s
-                await asyncio.sleep(wait)
+            try:
+                r = await client.get(
+                    f"https://api.semanticscholar.org/graph/v1/paper/arXiv:{arxiv_id}",
+                    params={"fields": "title,authors,year,abstract"},
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    return r.json()
+                if r.status_code == 429:
+                    wait = 3 * (2 ** attempt)  # 3s, 6s, 12s, 24s, 48s
+                    await asyncio.sleep(wait)
+                    continue
+                if r.status_code == 404:
+                    return None  # Paper not indexed yet
+            except Exception:
+                await asyncio.sleep(2)
                 continue
             break
     return None
@@ -268,7 +274,7 @@ async def build_papers(days_back: int = 7) -> list:
             "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}",
             "posted_at": entry["posted_at"],
         })
-        await asyncio.sleep(1.5)  # Semantic Scholar rate limit: ~1 req/sec
+        await asyncio.sleep(3)  # Semantic Scholar rate limit is strict
     return papers
 
 
